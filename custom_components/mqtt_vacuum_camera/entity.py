@@ -13,6 +13,7 @@ import time
 from typing import Optional
 
 from aiohttp import web
+from PIL import Image
 from homeassistant.components.camera import Camera, CameraEntityFeature
 from homeassistant.const import CONF_UNIQUE_ID, MATCH_ALL
 from homeassistant.helpers.device_registry import DeviceInfo as Dev_Info
@@ -20,6 +21,7 @@ from homeassistant.helpers.entity import DeviceInfo as Entity_Info
 from homeassistant.helpers.storage import STORAGE_DIR
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from valetudo_map_parser.config.colors import ColorsManagement
+from valetudo_map_parser.config.drawable import Drawable
 
 from .common import get_vacuum_unique_id_from_mqtt_topic
 from .const import (
@@ -183,14 +185,29 @@ class MQTTCamera(CoordinatorEntity, Camera):  # pylint: disable=too-many-instanc
         if hasattr(self, "processors"):
             await self.processors.obstacle_view.async_cleanup()
 
+    def _create_info_image(self, text: str) -> bytes:
+        """Return a PNG placeholder with the given status text."""
+        img = Image.new("RGBA", (500, 300), (32, 32, 32, 255))
+        Drawable.status_text(
+            img,
+            size=40,
+            color=(180, 180, 180, 255),
+            status=[text],
+            path_font=self.context.shared.vacuum_status_font,
+            position=True,
+        )
+        buffered = BytesIO()
+        img.save(buffered, format="PNG")
+        return buffered.getvalue()
+
     async def async_added_to_hass(self) -> None:
         """Handle entity added to Home Assistant."""
         self.settings.should_poll = True
-        _start_image = self.context.shared.last_image
-        self.image_state.main_image = await self.context.hass.async_add_executor_job(
-            self._image_to_bytes, _start_image, "Start Up"
-        )
         self.context.shared.camera_mode = CameraModes.MAP_VIEW
+        self.context.shared.image_grab = True
+        self.image_state.main_image = await self.context.hass.async_add_executor_job(
+            self._create_info_image, "Loading..."
+        )
         # Setup ObstacleView manager
         await self.processors.obstacle_view.async_setup(self.entity_id)
         self.async_schedule_update_ha_state(True)
@@ -392,11 +409,17 @@ class MQTTCamera(CoordinatorEntity, Camera):  # pylint: disable=too-many-instanc
                         self.mqtt.connector.get_destinations()
                     )
                 try:
+                    _render_start = time.monotonic()
                     await asyncio.wait_for(
                         self.processors.processor.run_process_valetudo_data(
                             parsed_json
                         ),
                         timeout=RENDER_TIMEOUT_S,
+                    )
+                    LOGGER.debug(
+                        "%s: Render completed in %.3fs",
+                        self.context.file_name,
+                        time.monotonic() - _render_start,
                     )
                     # Reset timeout counter on successful processing
                     self.settings.timeout_counter = 0
@@ -458,9 +481,8 @@ class MQTTCamera(CoordinatorEntity, Camera):  # pylint: disable=too-many-instanc
                 image_id if image_id else self.context.shared.vac_json_id,
             )
         else:
-            if self.context.shared.last_image is not None:
-                LOGGER.debug("%s: Using shared last_image.", self.context.file_name)
-                pil_img = self.context.shared.last_image
+            LOGGER.debug("%s: Render returned no image.", self.context.file_name)
+            return self._create_info_image("Failed render")
         self.image_state.width = pil_img.width
         self.image_state.height = pil_img.height
         buffered = BytesIO()
