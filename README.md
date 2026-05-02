@@ -18,7 +18,7 @@
 
 ## Valetudo Vacuum Maps in Home Assistant Made Easy
 
-Display real-time vacuum cleaner maps in Home Assistant for vacuums running [Valetudo Hypfer](https://valetudo.cloud/) or [Valetudo RE (rand256)](https://github.com/rand256/valetudo) firmware. Simple installation via [HACS](https://hacs.xyz/) with guided GUI configuration.
+Display real-time vacuum cleaner maps in Home Assistant for vacuums running [Valetudo Hypfer](https://valetudo.cloud/), [Valetudo RE (rand256)](https://github.com/rand256/valetudo) or [Congaduto](https://congatudo.cloud/) firmware. Simple installation via [HACS](https://hacs.xyz/) with guided GUI configuration.
 
 > ❗ **Note:** This is an unofficial project and is not affiliated with [valetudo.cloud](https://valetudo.cloud)
 
