@@ -379,6 +379,13 @@ class MQTTCamera(CoordinatorEntity, Camera):  # pylint: disable=too-many-instanc
         Updates internal state only. Home Assistant calls camera_image()
         separately to retrieve the cached image data.
         """
+        LOGGER.debug(
+            "%s: async_update entry mode=%s image_grab=%s binary_image=%s",
+            self.context.file_name,
+            self.context.shared.camera_mode,
+            self.context.shared.image_grab,
+            "set" if self.context.shared.binary_image is not None else "None",
+        )
 
         # Obstacle View Processing
         if self.context.shared.camera_mode == CameraModes.OBSTACLE_VIEW:
@@ -417,9 +424,10 @@ class MQTTCamera(CoordinatorEntity, Camera):  # pylint: disable=too-many-instanc
                         timeout=RENDER_TIMEOUT_S,
                     )
                     LOGGER.debug(
-                        "%s: Render completed in %.3fs",
+                        "%s: Render completed in %.3fs binary_image=%s",
                         self.context.file_name,
                         time.monotonic() - _render_start,
+                        "set" if self.context.shared.binary_image is not None else "None",
                     )
                     # Reset timeout counter on successful processing
                     self.settings.timeout_counter = 0
@@ -470,6 +478,13 @@ class MQTTCamera(CoordinatorEntity, Camera):  # pylint: disable=too-many-instanc
                     payload=data, data_type=data_type
                 )
             )
+        LOGGER.debug(
+            "%s: _process_parsed_json payload=%s data_type=%s parsed_json=%s",
+            self.context.file_name,
+            "present" if payload else "None",
+            data_type,
+            "ok" if parsed_json else "None",
+        )
         return parsed_json, test_mode, data_type
 
     def _image_to_bytes(self, pil_img, image_id: str | None = None) -> Optional[bytes]:

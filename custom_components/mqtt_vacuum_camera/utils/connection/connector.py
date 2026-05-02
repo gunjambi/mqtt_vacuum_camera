@@ -268,6 +268,13 @@ class ValetudoConnector:
 
     async def _hypfer_handle_image_data(self, msg) -> None:
         """Handle new Hypfer image data."""
+        payload_size = len(msg.payload) if hasattr(msg, "payload") else len(msg)
+        LOGGER.debug(
+            "%s: Hypfer MQTT image payload received (%d bytes) on %s",
+            self.connector_data.file_name,
+            payload_size,
+            getattr(msg, "topic", "?"),
+        )
         self.mqtt_data.img_payload = [msg, "Hypfer"]
         self.connector_data.data_in = True
         self.connector_data.ignore_data = False
@@ -384,6 +391,13 @@ class ValetudoConnector:
 
     async def _rand256_handle_image_payload(self, msg) -> None:
         """Handle Rand256 image payload."""
+        payload_size = len(msg.payload) if hasattr(msg, "payload") else len(msg)
+        LOGGER.debug(
+            "%s: Rand256 MQTT image payload received (%d bytes) on %s",
+            self.connector_data.file_name,
+            payload_size,
+            getattr(msg, "topic", "?"),
+        )
         self.mqtt_data.img_payload = [msg, "Rand256"]
         if self.mqtt_data.mqtt_vac_connect_state == "disconnected":
             self.mqtt_data.mqtt_vac_connect_state = "ready"
